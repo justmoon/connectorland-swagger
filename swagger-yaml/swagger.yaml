@@ -1,0 +1,249 @@
+---
+swagger: "2.0"
+info:
+  description: "Bringing together connectors and their users"
+  version: "1.0.0"
+  title: "Connectorland API"
+host: "virtserver.swaggerhub.com"
+basePath: "/justmoon/Connectorland/1.0.0"
+schemes:
+- "https"
+produces:
+- "application/json"
+paths:
+  /connectors/register:
+    post:
+      tags:
+      - "Connectors"
+      summary: "Register a connector"
+      description: "The registration endpoint is used by connectors to make themselves\
+        \ known in Connectorland. The connector submits only the hostname and a shared\
+        \ key, and Connecterland will call back to query the connector for webfinger\
+        \ metadata and then periodically to track uptime and learn about active peering\
+        \ relationships.\n"
+      parameters:
+      - in: "body"
+        name: "connector"
+        description: "JSON object describing the new connector"
+        required: true
+        schema:
+          $ref: "#/definitions/ConnectorRegistration"
+      responses:
+        200:
+          description: "The initial state of the connector object"
+          schema:
+            $ref: "#/definitions/Connector"
+        default:
+          description: "Unexpected error"
+          schema:
+            $ref: "#/definitions/Error"
+  /connectors/{hostname}:
+    get:
+      tags:
+      - "Connectors"
+      summary: "Get details about a connector"
+      parameters:
+      - name: "hostname"
+        in: "path"
+        description: "Domain name of the connector"
+        required: true
+        type: "string"
+      responses:
+        200:
+          description: "Information about connnector"
+          schema:
+            $ref: "#/definitions/Connector"
+        default:
+          description: "Unexpected error"
+          schema:
+            $ref: "#/definitions/Error"
+  /connectors/{hostname}/reports:
+    post:
+      tags:
+      - "Connectors"
+      summary: "Post a statistics report"
+      parameters:
+      - name: "hostname"
+        in: "path"
+        description: "Domain name of the connector"
+        required: true
+        type: "string"
+      - in: "body"
+        name: "stats"
+        description: "Connector statistics over some time period"
+        required: true
+        schema:
+          $ref: "#/definitions/ConnectorStatsReport"
+      responses:
+        204:
+          description: "The report has been received and processed successfully"
+        default:
+          description: "Unexpected error"
+          schema:
+            $ref: "#/definitions/Error"
+definitions:
+  Connector:
+    type: "object"
+    properties:
+      hostname:
+        type: "string"
+        example: "red.ilpdemo.org"
+        description: "Domain name where the connector can be reached (via HTTPS.)"
+      name:
+        type: "string"
+        example: "Red ILP Demo"
+        description: "Human-readable connector name."
+      short_description:
+        type: "string"
+        example: "The hottest ledger in the ILP test network."
+        description: "Short self-description of the connector (plain text, 140 chars\
+          \ max.)"
+      long_description:
+        type: "string"
+        example: "Longer description goes here."
+        description: "Longer self-description of the connector (Markdown, 10000 chars\
+          \ max.)"
+      logo:
+        type: "string"
+        example: "https://red.ilpdemo.org/assets/logo.png"
+        description: "Image URL of a logo representing the connector."
+      first_seen:
+        type: "string"
+        format: "date-time"
+        description: "Timestamp when the connector was first registered."
+      last_queried:
+        type: "string"
+        format: "date-time"
+        description: "Timestamp representing when the most recent query to the connector\
+          \ was initiated."
+      uptime:
+        $ref: "#/definitions/Connector_uptime"
+      peers:
+        type: "array"
+        description: "List of known peering relationships."
+        items:
+          $ref: "#/definitions/Connector_peers"
+  ConnectorRegistration:
+    type: "object"
+    properties:
+      hostname:
+        type: "string"
+        description: "Domain name where the connector can be reached (via HTTPS.)"
+  ConnectorStatsReport:
+    type: "object"
+    properties:
+      start_time:
+        type: "string"
+        format: "date-time"
+        example: "2017-01-12T08:37:00.000Z"
+        description: "Start of the time period during which the aggregate data in\
+          \ this report has been collected."
+      end_time:
+        type: "string"
+        format: "date-time"
+        example: "2017-01-12T08:37:59.999Z"
+        description: "End of the time period during which the aggregate data in this\
+          \ report has been collected."
+      peers:
+        type: "array"
+        description: "Set of per-peer aggregate volume data."
+        items:
+          $ref: "#/definitions/ConnectorStatsReport_peers"
+      ledger:
+        $ref: "#/definitions/ConnectorStatsReport_ledger"
+  AssetDescriptor:
+    type: "object"
+    properties:
+      type:
+        type: "string"
+        description: "URI defining the asset type, e.g. `urn:iso:std:iso:4217` for\
+          \ ISO currency codes. If omitted, defaults to `urn:iso:std:iso:4217`"
+        default: "urn:iso:std:iso:4217"
+      code:
+        type: "string"
+        example: "USD"
+        description: "The currency code to represent this asset. For `urn:iso:std:iso:4217`\
+          \ assets, this MUST be a three-letter uppercase ISO 4217 currency code."
+      symbol:
+        type: "string"
+        example: "$"
+        description: "Symbol to use in user interfaces with amounts of this asset.\
+          \ For example, \"$\"."
+      decimal_digits:
+        type: "number"
+        example: 2
+        description: "The number of decimal places conventionally displayed when representing\
+          \ amounts of this asset in a user interface. A user interface MAY represent\
+          \ additional digits in any style it prefers (for example, using a smaller\
+          \ font to represent less significant digits). This value MUST be a non-negative\
+          \ integer. This MAY be different from the precision and scale used internally\
+          \ by the ledger, which are reported in the ledger metadata field."
+    description: "Object describing a type of asset."
+  Error:
+    type: "object"
+    properties:
+      code:
+        type: "integer"
+        format: "int32"
+      message:
+        type: "string"
+      fields:
+        type: "string"
+  Connector_uptime:
+    properties:
+      all_time:
+        type: "number"
+        example: 99.99299999999999499777914024889469146728515625
+        description: "Uptime percentage since registration."
+      last_year:
+        type: "number"
+        example: 99.909999999999996589394868351519107818603515625
+        description: "Uptime percentage for the last year."
+      last_month:
+        type: "number"
+        example: 100
+        description: "Uptime percentage over the last month."
+    description: "Uptime metrics for this connector."
+  Connector_peers:
+    properties:
+      hostname:
+        type: "string"
+        description: "Hostname of the peer."
+      asset:
+        $ref: "#/definitions/AssetDescriptor"
+    description: "Description of a peering relationship"
+  ConnectorStatsReport_peers:
+    properties:
+      hostname:
+        type: "string"
+        example: "blue.ilpdemo.org"
+        description: "Hostname of the peer."
+      asset:
+        $ref: "#/definitions/AssetDescriptor"
+      volume_sent:
+        type: "string"
+        example: "32013.21"
+        description: "Decimal string representing the cumulative amount of volume\
+          \ sent via this peer during the reported time period."
+      volume_received:
+        type: "string"
+        example: "17231.91"
+        description: "Decimal string representing the cumulative amount of volume\
+          \ received from this peer during the reported time period."
+      ending_balance:
+        type: "string"
+        example: "-41291.57"
+        description: "Decimal string representing the final balance between the two\
+          \ peers at the end of the reported time period according to the reporting\
+          \ connector. The balance should be positive if the reporting connector is\
+          \ owed by the peer and negative if it owes the peer."
+    description: "Single per-peer aggregate volume data object."
+  ConnectorStatsReport_ledger:
+    properties:
+      id:
+        type: "string"
+        description: "URI of the ledger metadata endpoint."
+      asset:
+        $ref: "#/definitions/AssetDescriptor"
+    description: "Information about the ledger associated with the reporting connector.\
+      \ (Optional)"
